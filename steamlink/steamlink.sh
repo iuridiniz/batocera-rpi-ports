@@ -21,7 +21,7 @@ STEAMLINK_ROOTFS="${WORKDIR}/steamlink-rootfs"
 STEAMLINK_BINARY="${STEAMLINK_ROOTFS}/usr/bin/steamlink"
 XWAYLAND_ROOTFS="${WORKDIR}/xwayland-rootfs"
 XWAYLAND_BINARY="${XWAYLAND_ROOTFS}/usr/bin/Xwayland"
-BWRAP_BINARY="${BINARYDIR}/bwrap"
+BWRAP_BINARY="${BINARYDIR}/bwrap-run-rootfs-insecure.sh"
 DOCKER_IMAGE_FETCH_BINARY="${BINARYDIR}/docker-download-image"
 MINIMAL_SPACE_REQUIRED_STEAMLINK_ROOTFS=$(( 1024 * 1024 * 1024 * 1 )) # 1GB
 MINIMAL_SPACE_REQUIRED_XWAYLAND_ROOTFS=$(( 1024 * 1024 * 500 )) # 600 MB
@@ -35,8 +35,6 @@ if [ -z "${RUN_MODE}" ]; then
     else
         RUN_MODE=other
     fi
-else
-    RUN_MODE=other
 fi
 SKIP_DOWNLOADS=${SKIP_DOWNLOADS:-""}
 
@@ -269,25 +267,7 @@ kill $(pidof Xwayland) && sleep 5 ;
 echo -n "Starting ${XWAYLAND_BINARY} (under bwrap)..."
 [ -h "$XWAYLAND_ROOTFS"/var/run ] && rm "$XWAYLAND_ROOTFS"/var/run
 
-"${BWRAP_BINARY}" \
-    --bind "${XWAYLAND_ROOTFS}" / \
-    --dev-bind /dev /dev \
-    --bind /sys /sys \
-    --bind /tmp /tmp \
-    --proc /proc \
-    --dir /run/ --bind /run/ /run/ \
-    --dir /var/run/ --bind /var/run/ /var/run/ \
-    --ro-bind /var/lib/dbus/machine-id /var/lib/dbus/machine-id \
-    --ro-bind /lib/modules /lib/modules \
-    --ro-bind /etc/resolv.conf /etc/resolv.conf \
-    --ro-bind /etc/hostname /etc/hostname \
-    --ro-bind /etc/hosts /etc/hosts \
-    --ro-bind /boot /boot \
-    --ro-bind / /.host/ \
-    --bind /userdata/roms /userdata/roms \
-    --bind /userdata/bios /userdata/bios \
-    --setenv HOME /root \
-    Xwayland -fullscreen &
+"${BWRAP_BINARY}" "${XWAYLAND_ROOTFS}" Xwayland -fullscreen &
 wayland_pid=$!
 
 echo "done"
@@ -301,26 +281,7 @@ echo -"Starting ${STEAMLINK_BINARY} (under bwrap)..."
 
 [ -h "$STEAMLINK_ROOTFS"/var/run ] && rm "$STEAMLINK_ROOTFS"/var/run
 
-"${BWRAP_BINARY}" \
-    --bind "${STEAMLINK_ROOTFS}" / \
-    --dev-bind /dev /dev \
-    --bind /sys /sys \
-    --bind /tmp /tmp \
-    --proc /proc \
-    --dir /run/ --bind /run/ /run/ \
-    --dir /var/run/ --bind /var/run/ /var/run/ \
-    --ro-bind /var/lib/dbus/machine-id /var/lib/dbus/machine-id \
-    --ro-bind /lib/modules /lib/modules \
-    --ro-bind /etc/resolv.conf /etc/resolv.conf \
-    --ro-bind /etc/hostname /etc/hostname \
-    --ro-bind /etc/hosts /etc/hosts \
-    --ro-bind /boot /boot \
-    --ro-bind / /.host/ \
-    --bind /userdata/roms /userdata/roms \
-    --bind /userdata/bios /userdata/bios \
-    --setenv HOME /root \
-    --setenv DISPLAY :0 \
-    steamlink
+DISPLAY=:0 "${BWRAP_BINARY}" "${STEAMLINK_ROOTFS}" steamlink
 
 # kill Xwayland if running
 kill $(pidof Xwayland) && sleep 2 || true;

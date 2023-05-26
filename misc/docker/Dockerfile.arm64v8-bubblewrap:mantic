@@ -28,6 +28,9 @@ RUN \
     sh -c 'for lib in /output/lib/lib*; do patchelf --set-rpath \$ORIGIN "$lib"; done' && \
     /output/bin/bwrap --version
 
+COPY ./bwrap-run-rootfs-insecure.sh /output/bin/bwrap-run-rootfs-insecure.sh
+RUN chmod +x /output/bin/bwrap-run-rootfs-insecure.sh
+
 # get only the binary + libs
 FROM scratch
 COPY --from=base /output/ /

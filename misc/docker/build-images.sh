@@ -19,3 +19,7 @@ for dockerfile in Dockerfile.arm64v8-*; do
     image_name="`echo "$dockerfile" | sed 's/Dockerfile\.\(.*\)/\1/'`"
     docker buildx build --load --progress=plain --platform linux/arm64 -t "$DOCKER_IMAGE_BASE/$image_name" -f "$dockerfile" .
 done
+
+
+# Push with:
+# $ docker image ls | grep iuridiniz/arm | perl -lane 'print "$F[0]:$F[1]"' | grep -v "none" | sort | xargs -n1 docker push
