@@ -8,7 +8,7 @@ BASEDIR=$( (cd -P "`dirname "$SELF"`" && pwd) )
 
 #### PRE-DEFINED VARIABLES ####
 
-DOCKER_IMAGE_STEAMLINK="iuridiniz/arm32v7-steamlink:stretch"
+DOCKER_IMAGE_STEAMLINK="iuridiniz/arm32v7-steamlink:bullseye"
 DOCKER_IMAGE_BWRAP="iuridiniz/arm64v8-bubblewrap:mantic"
 DOCKER_IMAGE_XWAYLAND="iuridiniz/arm64v8-xwayland:mantic"
 URL_DOCKER_IMAGE_FETCH="https://raw.githubusercontent.com/moby/moby/v24.0.1/contrib/download-frozen-image-v2.sh"
@@ -23,7 +23,9 @@ XWAYLAND_ROOTFS="${WORKDIR}/xwayland-rootfs"
 XWAYLAND_BINARY="${XWAYLAND_ROOTFS}/usr/bin/Xwayland"
 BWRAP_BINARY="${BINARYDIR}/bwrap"
 DOCKER_IMAGE_FETCH_BINARY="${BINARYDIR}/docker-download-image"
-MINIMAL_SPACE_REQUIRED=$(( 1024 * 1024 * 1024 * 2 )) # 2GB
+MINIMAL_SPACE_REQUIRED_STEAMLINK_ROOTFS=$(( 1024 * 1024 * 1024 * 1 )) # 1GB
+MINIMAL_SPACE_REQUIRED_XWAYLAND_ROOTFS=$(( 1024 * 1024 * 500 )) # 600 MB
+MINIMAL_SPACE_REQUIRED_BWRAP_BINARY=$(( 1024 * 1024 * 20 )) # 20 MB
 
 # Try to detect if we are running in batocera (emulationstation) or not
 RUN_MODE=${RUN_MODE:-""}
@@ -48,14 +50,15 @@ skip_downloads() {
 }
 
 do_check_minimal_space_required() {
+    minimal=$1
     if skip_downloads; then
         return
     fi
 
     echo -n "Checking minimal space required..."
     available_space=$(($(stat -f --format="%a*%S" "${WORKDIR}")))
-    if [ "${available_space}" -lt "${MINIMAL_SPACE_REQUIRED}" ]; then
-        echo "Error: not enough space available in ${WORKDIR} (${available_space} < ${MINIMAL_SPACE_REQUIRED})"
+    if [ "${available_space}" -lt "${minimal}" ]; then
+        echo "Error: not enough space available in ${WORKDIR} (${available_space} < ${minimal})"
         exit 1
     fi
     echo "done"
@@ -84,6 +87,7 @@ do_download_bwrap() {
     [ -x "${BWRAP_BINARY}" ] && return
 
     # download requisites
+    do_check_minimal_space_required "${MINIMAL_SPACE_REQUIRED_BWRAP_BINARY}"
     do_download_docker_image_fetch
 
     echo -n "Downloading docker image: ${DOCKER_IMAGE_BWRAP}..."
@@ -113,6 +117,7 @@ do_download_xwayland() {
     [ -x "${XWAYLAND_BINARY}" ] && return
 
     # download requisites
+    do_check_minimal_space_required "${MINIMAL_SPACE_REQUIRED_XWAYLAND_ROOTFS}"
     do_download_docker_image_fetch
 
     echo -n "Downloading docker image: ${DOCKER_IMAGE_XWAYLAND}..."
@@ -147,6 +152,7 @@ do_download_steamlink() {
     [ -x "${STEAMLINK_BINARY}" ] && return
 
     # download requisites
+    do_check_minimal_space_required "${MINIMAL_SPACE_REQUIRED_STEAMLINK_ROOTFS}"
     do_download_docker_image_fetch
 
     echo -n "Downloading docker image: ${DOCKER_IMAGE_STEAMLINK}..."
@@ -235,7 +241,7 @@ if [ ! -x "${STEAMLINK_BINARY}" ]; then
     echo "Warning: ${STEAMLINK_BINARY} does not exists (first run?)"
 fi
 
-do_check_minimal_space_required
+
 do_download_steamlink
 do_download_xwayland
 do_download_bwrap
@@ -268,6 +274,7 @@ echo -n "Starting ${XWAYLAND_BINARY} (under bwrap)..."
     --proc /proc \
     --dir /run/ --bind /run/ /run/ \
     --dir /var/run/ --bind /var/run/ /var/run/ \
+    --ro-bind /var/lib/dbus/machine-id /var/lib/dbus/machine-id \
     --ro-bind /lib/modules /lib/modules \
     --ro-bind /etc/resolv.conf /etc/resolv.conf \
     --ro-bind /etc/hostname /etc/hostname \
