@@ -1,0 +1,35 @@
+# HOW TO BUILD THIS IMAGE
+# $ docker build --progress=plain --platform linux/arm64 -t iuridiniz/arm64v8-bubblewrap:mantic -f Dockerfile.arm64v8-bubblewrap .
+
+# HOW TO RUN THIS IMAGE
+# $ docker run --rm -it --platform linux/arm64 iuridiniz/arm64v8-bubblewrap:mantic bwrap --version
+
+# HOW TO EXPORT THIS IMAGE (ever if dockerd is running with userns-remap) - see https://docs.docker.com/engine/security/userns-remap/
+# $ docker rm exportme; docker run --platform linux/arm64 --userns host --name exportme iuridiniz/arm64v8-bubblewrap:mantic bwrap --version
+# $ docker export exportme -o rootfs-bubblewrap-mantic.tar; docker rm exportme
+
+FROM arm64v8/ubuntu:mantic AS base
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# install bubblewrap
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    bubblewrap patchelf \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN bwrap --version
+RUN \
+    mkdir -p /output/bin /output/lib && \
+    cp /bin/bwrap /output/bin/ && \
+    cp /lib/aarch64-linux-gnu/libselinux.so.1 /lib/aarch64-linux-gnu/libcap.so.2 /lib/aarch64-linux-gnu/libc.so.6 /lib/aarch64-linux-gnu/libpcre2-8.so.0 /output/lib/ && \
+    cp /lib/ld-linux-aarch64.so.1 /output/lib/ && \
+    patchelf --set-rpath \$ORIGIN/lib:\$ORIGIN/../lib:\$ORIGIN /output/bin/bwrap && \
+    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /output/bin/bwrap && \
+    sh -c 'for lib in /output/lib/lib*; do patchelf --set-rpath \$ORIGIN "$lib"; done' && \
+    /output/bin/bwrap --version
+
+# get only the binary + libs
+FROM scratch
+COPY --from=base /output/ /
+
+CMD ["/bin/bwrap", "--version"]

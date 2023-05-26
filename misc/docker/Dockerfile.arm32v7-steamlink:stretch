@@ -1,0 +1,72 @@
+# HOW TO BUILD THIS IMAGE
+# $ docker build --progress=plain --platform linux/arm/v7 -t iuridiniz/arm32v7-steamlink:stretch -f Dockerfile.stretch-steamlink .
+
+# HOW TO RUN THIS IMAGE:
+# $ docker run --platform linux/arm/v7 --rm -it --name steamlink iuridiniz/arm32v7-steamlink:stretch /bin/bash
+
+# HOW TO EXPORT THIS IMAGE (ever if dockerd is running with userns-remap) - see https://docs.docker.com/engine/security/userns-remap/
+# $ docker rm exportme; docker run --platform linux/arm/v7 --userns host --name exportme iuridiniz/arm32v7-steamlink:stretch /bin/true
+# $ docker export exportme -o rootfs-steamlink-bullseye.tar; docker rm exportme
+
+FROM iuridiniz/arm32v7-raspbian:stretch AS base
+
+ENV DEBIAN_FRONTEND noninteractive
+# install steamlink
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    libasyncns0 \
+    libavcodec57 \
+    libavutil55 \
+    libegl1-mesa \
+    libegl1-mesa:armhf \
+    libegl1-mesa-drivers \
+    libflac8 \
+    libgl1-mesa-dri \
+    libgl1-mesa-dri \
+    libgl1-mesa-glx \
+    libglapi-mesa \
+    libgles2-mesa \
+    libice6 \
+    libpulse0 \
+    libraspberrypi-bin \
+    libsndfile1 \
+    libsndio6.1 \
+    libvorbis0a \
+    libxi6 \
+    python3 \
+    raspberrypi-bootloader \
+    raspberrypi-kernel \
+    steamlink \
+    sudo \
+    udev \
+    && /bin/true
+
+RUN mkdir -p /root/.local/share/SteamLink && \
+    touch /root/.local/share/SteamLink/.ignore_cpuinfo /root/.local/share/SteamLink/.ignore_gpumem && \
+    perl -i.BAK -lane 'print unless /^# Don.t allow running as root/../^fi$/' /usr/bin/steamlink && \
+    chmod -x /usr/bin/steamlink.BAK && \
+    nohup sh -c 'yes | /usr/bin/steamlink' && \
+    rm /root/.local/share/SteamLink/.ignore_cpuinfo /root/.local/share/SteamLink/.ignore_gpumem
+
+# RUN apt-get install ncdu
+
+# clean up
+RUN \
+    apt-get -y --purge autoremove && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb && \
+    rm -rf /root/.local/share/SteamLink/steamlink.tar.gz && \
+    rm -rf /boot/* && \
+    rm -rf /lib/modules/* && \
+    rm -rf /tmp/* /var/tmp/* /tmp/* && \
+    rm -rf /usr/share/doc/* && \
+    rm -rf /usr/lib/python3.5/__pycache__/* /usr/lib/python3/__pycache__/* && \
+    rm -rf /*.core && \
+    rm -rf /root/nohup.out /nohup.out && \
+    rm -rf /var/run /run && \
+    mkdir -p /var/run /run && \
+    /bin/true
+
+
+# squash image
+FROM scratch
+COPY --from=base / /
+CMD ["/bin/bash", "--login"]
