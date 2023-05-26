@@ -187,11 +187,16 @@ if [ "${SELF}" != "${EXPECTED_SELF}" ]; then
     echo "Warning: ${SELF} is not ${EXPECTED_SELF}"
 fi
 
-# only valid RUN_MODE's are batocera and other
-if [ "${RUN_MODE}" != "batocera" -a "${RUN_MODE}" != "other" ]; then
+# only valid RUN_MODE's are batocera, Xwayland and other
+if [ "${RUN_MODE}" != "batocera" -a "${RUN_MODE}" != "xwayland" -a "${RUN_MODE}" != "other" ]; then
     echo "Error: invalid RUN_MODE=${RUN_MODE}"
     exit 1
+else
+    echo "*******************************"
+    echo "RUN_MODE=${RUN_MODE}"
+    echo "*******************************"
 fi
+
 
 export PATH="${BINARYDIR}:/usr/bin:/bin:/usr/local/bin:/usr/sbin:/sbin:/usr/local/sbin"
 export TMPDIR="${TMPDIR}"
@@ -241,7 +246,6 @@ if [ ! -x "${STEAMLINK_BINARY}" ]; then
     echo "Warning: ${STEAMLINK_BINARY} does not exists (first run?)"
 fi
 
-
 do_download_steamlink
 do_download_xwayland
 do_download_bwrap
@@ -251,9 +255,8 @@ do_download_bwrap
 # clear TMPDIR (used for downloads)
 rm -rf "${TMPDIR}"/*
 
-# if not running in batocera, only download and exit
-if [ "${RUN_MODE}" != "batocera" ]; then
-    echo "Not running in batocera and binaries were downloaded and installed in ${WORKDIR}. Exiting..."
+if [ "${RUN_MODE}" = "other" ]; then
+    echo "Binaries were downloaded and installed in ${WORKDIR}. Exiting..."
     exit 0
 fi
 
@@ -285,7 +288,14 @@ echo -n "Starting ${XWAYLAND_BINARY} (under bwrap)..."
     --bind /userdata/bios /userdata/bios \
     --setenv HOME /root \
     Xwayland -fullscreen &
+wayland_pid=$!
+
 echo "done"
+
+if [ "${RUN_MODE}" = "xwayland" ]; then
+    wait ${wayland_pid}
+    exit 0
+fi
 
 echo -"Starting ${STEAMLINK_BINARY} (under bwrap)..."
 
@@ -315,5 +325,9 @@ echo -"Starting ${STEAMLINK_BINARY} (under bwrap)..."
 # kill Xwayland if running
 kill $(pidof Xwayland) && sleep 2 || true;
 kill -9 $(pidof Xwayland) || true;
+
+# kill cec-client if running
+kill $(pidof cec-client) && sleep 2 || true;
+kill -9 $(pidof cec-client) || true;
 
 exec /bin/true
