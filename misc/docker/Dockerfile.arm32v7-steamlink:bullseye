@@ -48,7 +48,7 @@ RUN  \
     /bin/true
 
 RUN mkdir -p /root/.local/share/SteamLink && \
-    touch /root/.local/share/SteamLink/.ignore_cpuinfo /root/.local/share/SteamLink/.ignore_gpumem && \
+    touch /root/.local/share/SteamLink/.ignore_cpuinfo /root/.local/share/SteamLink/.ignore_gpumem /root/.local/share/SteamLink/.ignore_x11 && \
     perl -i.BAK -lane 'print unless /^# Don.t allow running as root/../^fi$/' /usr/bin/steamlink && \
     chmod -x /usr/bin/steamlink.BAK && \
     nohup sh -c 'yes | /usr/bin/steamlink' && \

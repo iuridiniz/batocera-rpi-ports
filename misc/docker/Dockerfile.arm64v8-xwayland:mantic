@@ -14,30 +14,25 @@ ENV DEBIAN_FRONTEND noninteractive
 
 # install Xwayland
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    xwayland patchelf libegl1 libegl-mesa0\
+    xwayland libegl1 libegl-mesa0 \
     && rm -rf /var/lib/apt/lists/*
 
 # test Xwayland
 RUN Xwayland -version
 
-# get only the binaris + libs + patch binary
+# clean up
 RUN \
-    mkdir -p /output/bin /output/lib /output/lib/dri && \
-    cp /usr/bin/xkbcomp /output/bin/ && \
-    cp /usr/bin/Xwayland /output/bin/ && \
-    cp /usr/lib/aarch64-linux-gnu/dri/zink_dri.so /usr/lib/aarch64-linux-gnu/dri/kms_swrast_dri.so /usr/lib/aarch64-linux-gnu/dri/swrast_dri.so /usr/lib/aarch64-linux-gnu/dri/vc4_dri.so /output/lib/dri/ && \
-    cp /usr/lib/aarch64-linux-gnu/libEGL.so.1 /usr/lib/aarch64-linux-gnu/libEGL_mesa.so.0 /output/lib/ && \
-    sh -c "ldd /usr/bin/Xwayland /usr/bin/xkbcomp /usr/lib/aarch64-linux-gnu/dri/*.so /output/lib/lib*" | perl -lane 'print if s#^^.*(/lib/.*)\s+\(.*$#$1#' | sort | uniq | xargs -I{} cp -v {} /output/lib/ && \
-    patchelf --set-rpath \$ORIGIN/lib:\$ORIGIN/../lib:\$ORIGIN /output/bin/Xwayland && \
-    patchelf --set-rpath \$ORIGIN/lib:\$ORIGIN/../lib:\$ORIGIN:/userdata/roms/ports/.data/steamlink/lib /output/bin/xkbcomp && \
-    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /output/bin/Xwayland && \
-    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /output/bin/xkbcomp && \
-    sh -c 'for lib in /output/lib/lib*; do patchelf --set-rpath \$ORIGIN "$lib"; done' && \
-    sh -c 'for lib in /output/lib/dri/*.so; do patchelf --set-rpath \$ORIGIN/.. "$lib"; done' && \
-    /output/bin/Xwayland -version
-
+    apt-get -y --purge autoremove && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb && \
+    rm -rf /boot/* && \
+    rm -rf /lib/modules/* && \
+    rm -rf /tmp/* /var/tmp/* /tmp/* && \
+    rm -rf /usr/share/doc/* && \
+    rm -rf /var/run /run && \
+    mkdir -p /var/run /run && \
+    /bin/true
 # squash image
 FROM scratch
-COPY --from=base /output /
+COPY --from=base / /
 
-CMD ["/bin/Xwayland", "-version"]
+CMD ["Xwayland", "-version"]

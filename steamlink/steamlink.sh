@@ -19,9 +19,9 @@ BINARYDIR="${WORKDIR}/bin"
 TMPDIR="${WORKDIR}/temp"
 STEAMLINK_ROOTFS="${WORKDIR}/steamlink-rootfs"
 STEAMLINK_BINARY="${STEAMLINK_ROOTFS}/usr/bin/steamlink"
+XWAYLAND_ROOTFS="${WORKDIR}/xwayland-rootfs"
+XWAYLAND_BINARY="${XWAYLAND_ROOTFS}/usr/bin/Xwayland"
 BWRAP_BINARY="${BINARYDIR}/bwrap"
-XWAYLAND_BINARY="${BINARYDIR}/Xwayland"
-XKBBOMP_BINARY="${BINARYDIR}/xkbcomp"
 DOCKER_IMAGE_FETCH_BINARY="${BINARYDIR}/docker-download-image"
 MINIMAL_SPACE_REQUIRED=$(( 1024 * 1024 * 1024 * 2 )) # 2GB
 
@@ -127,9 +127,14 @@ do_download_xwayland() {
     fi
     echo "done"
 
-    echo -n "Installing ${XWAYLAND_BINARY}..."
-    tar -xf "${layer_tar}" -C "${WORKDIR}"
-    chown -R root:root "${WORKDIR}"
+    echo -n "Installing ${XWAYLAND_BINARY} (and backup old one if it exists)..."
+    # backup old rootfs
+    [ -d "${XWAYLAND_ROOTFS}.old" ] && rm -rf "${XWAYLAND_ROOTFS}.old"
+    [ -d "${XWAYLAND_ROOTFS}" ] && mv "${XWAYLAND_ROOTFS}" "${XWAYLAND_ROOTFS}.old"
+    mkdir -p "${XWAYLAND_ROOTFS}"
+
+    tar -xf "${layer_tar}" -C "${XWAYLAND_ROOTFS}"
+    chown -R root:root "${XWAYLAND_ROOTFS}"
     [ ! -x "${XWAYLAND_BINARY}" ] && echo "Error: ${XWAYLAND_BINARY} does not exists" && exit 1
     echo "done"
 }
@@ -238,7 +243,7 @@ do_download_bwrap
 [ ! -x "${STEAMLINK_BINARY}" ] && echo "Error: ${STEAMLINK_BINARY} does not exists" && exit 1
 
 # clear TMPDIR (used for downloads)
-# rm -rf "${TMPDIR}"/*
+rm -rf "${TMPDIR}"/*
 
 # if not running in batocera, only download and exit
 if [ "${RUN_MODE}" != "batocera" ]; then
@@ -253,15 +258,31 @@ kill $(pidof Xwayland) && sleep 5 ;
 
 # execute Xwayland
 echo -n "Starting ${XWAYLAND_BINARY} (under bwrap)..."
+[ -h "$XWAYLAND_ROOTFS"/var/run ] && rm "$XWAYLAND_ROOTFS"/var/run
+
 "${BWRAP_BINARY}" \
-    --bind / / \
-    --bind "${XKBBOMP_BINARY}" /usr/bin/xkbcomp \
-    "${XWAYLAND_BINARY}" -fullscreen :0 &
+    --bind "${XWAYLAND_ROOTFS}" / \
+    --dev-bind /dev /dev \
+    --bind /sys /sys \
+    --bind /tmp /tmp \
+    --proc /proc \
+    --dir /run/ --bind /run/ /run/ \
+    --dir /var/run/ --bind /var/run/ /var/run/ \
+    --ro-bind /lib/modules /lib/modules \
+    --ro-bind /etc/resolv.conf /etc/resolv.conf \
+    --ro-bind /etc/hostname /etc/hostname \
+    --ro-bind /etc/hosts /etc/hosts \
+    --ro-bind /boot /boot \
+    --ro-bind / /.host/ \
+    --bind /userdata/roms /userdata/roms \
+    --bind /userdata/bios /userdata/bios \
+    --setenv HOME /root \
+    Xwayland -fullscreen &
 echo "done"
 
-echo -"Starting steamlink (under bwrap)..."
+echo -"Starting ${STEAMLINK_BINARY} (under bwrap)..."
 
-[ -h "$STEAMLINK_ROOTFS"/var/run ] && rm "$STEAMLINK_ROOTFS"/var/rune
+[ -h "$STEAMLINK_ROOTFS"/var/run ] && rm "$STEAMLINK_ROOTFS"/var/run
 
 "${BWRAP_BINARY}" \
     --bind "${STEAMLINK_ROOTFS}" / \
