@@ -14,13 +14,11 @@ ENV DEBIAN_FRONTEND noninteractive
 # install steamlink
 RUN apt-get update && apt-get install --no-install-recommends -y \
     libasyncns0 \
-    libavcodec57 \
-    libavutil55 \
+    libavcodec58 \
+    libavutil56 \
     libegl1-mesa \
-    libegl1-mesa:armhf \
-    libegl1-mesa-drivers \
+    libegl-mesa0 \
     libflac8 \
-    libgl1-mesa-dri \
     libgl1-mesa-dri \
     libgl1-mesa-glx \
     libglapi-mesa \
@@ -29,7 +27,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpulse0 \
     libraspberrypi-bin \
     libsndfile1 \
-    libsndio6.1 \
+    libsndio7.0 \
     libvorbis0a \
     libxi6 \
     python3 \
@@ -38,6 +36,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     steamlink \
     sudo \
     udev \
+    xterm \
     && /bin/true
 
 RUN mkdir -p /root/.local/share/SteamLink && \

@@ -17,10 +17,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libavcodec57 \
     libavutil55 \
     libegl1-mesa \
-    libegl1-mesa:armhf \
     libegl1-mesa-drivers \
     libflac8 \
-    libgl1-mesa-dri \
     libgl1-mesa-dri \
     libgl1-mesa-glx \
     libglapi-mesa \
@@ -38,6 +36,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     steamlink \
     sudo \
     udev \
+    xterm \
     && /bin/true
 
 RUN mkdir -p /root/.local/share/SteamLink && \

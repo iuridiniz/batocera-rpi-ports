@@ -16,8 +16,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libasyncns0 \
     libavcodec58 \
     libavutil56 \
-    libegl-mesa0 \
     libegl1-mesa \
+    libegl-mesa0 \
     libflac8 \
     libgl1-mesa-dri \
     libgl1-mesa-glx \
@@ -36,6 +36,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     steamlink \
     sudo \
     udev \
+    xterm \
     && /bin/true
 
 # missing links
