@@ -1,0 +1,32 @@
+# HOW TO BUILD THIS IMAGE
+# $ docker build --progress=plain --platform linux/arm/v7 -t iuridiniz/arm32v7-raspbian:buster -f Dockerfile.buster .
+
+# HOW TO RUN THIS IMAGE:
+# $ docker run --platform linux/arm/v7 --rm -it --name raspbian iuridiniz/arm32v7-raspbian:buster /bin/bash
+
+# HOW TO EXPORT THIS IMAGE (ever if dockerd is running with userns-remap) - see https://docs.docker.com/engine/security/userns-remap/
+# $ docker rm exportme; docker run --platform linux/arm/v7 --userns host --name exportme iuridiniz/arm32v7-raspbian:buster /bin/true
+# $ docker export exportme -o rootfs-raspbian-buster.tar; docker rm exportme
+
+FROM arm32v7/debian:buster-slim AS base
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# add trusted apt keys
+COPY debian-etc-apt-trusted.gpg /etc/apt/trusted.gpg
+
+# add apt sources
+COPY debian-etc-apt-sources.list.buster /etc/apt/sources.list
+
+# upgrade system and clean up
+RUN export DEBIAN_FRONTEND noninteractive && \
+    apt-get update && \
+    apt-get dist-upgrade -y && \
+    apt-get -y --purge autoremove && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /tmp/* /var/cache/apt/archives/*.deb
+
+# squash image
+FROM scratch
+COPY --from=base / /
+CMD ["/bin/bash", "--login"]
