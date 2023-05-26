@@ -299,6 +299,7 @@ echo -"Starting ${STEAMLINK_BINARY} (under bwrap)..."
     --proc /proc \
     --dir /run/ --bind /run/ /run/ \
     --dir /var/run/ --bind /var/run/ /var/run/ \
+    --ro-bind /var/lib/dbus/machine-id /var/lib/dbus/machine-id \
     --ro-bind /lib/modules /lib/modules \
     --ro-bind /etc/resolv.conf /etc/resolv.conf \
     --ro-bind /etc/hostname /etc/hostname \
